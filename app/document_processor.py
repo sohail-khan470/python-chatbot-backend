@@ -1,4 +1,4 @@
-from langchain.document_loaders import PyPDFLoader, TextLoader
+from langchain.document_loaders import PyPDFLoader, TextLoader, CSVLoader
 from langchain.schema import Document
 import aiofiles
 import os
@@ -16,6 +16,8 @@ class DocumentProcessor:
             return await DocumentProcessor._process_pdf(file_path, filename)
         elif file_extension == 'txt':
             return await DocumentProcessor._process_text(file_path, filename)
+        elif file_extension == 'csv':
+            return await DocumentProcessor._process_csv(file_path, filename)
         else:
             raise ValueError(f"Unsupported file type: {file_extension}")
     
@@ -37,10 +39,23 @@ class DocumentProcessor:
         """Process text file"""
         async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
             content = await f.read()
-        
+
         document = Document(
             page_content=content,
             metadata={'source': filename, 'type': 'text'}
         )
-        
+
         return [document]
+
+    @staticmethod
+    async def _process_csv(file_path: str, filename: str) -> List[Document]:
+        """Process CSV file"""
+        loader = CSVLoader(file_path)
+        documents = loader.load()
+
+        # Add source metadata
+        for doc in documents:
+            doc.metadata['source'] = filename
+            doc.metadata['type'] = 'csv'
+
+        return documents
